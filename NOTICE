@@ -1,0 +1,41 @@
+wj-dsh-remote
+=============
+
+This package is a modified copy of @linxin666/dsh-remote-web-ui version 0.4.14,
+published by the dsh-web project:
+
+  https://github.com/zhu1090093659/dsh-web
+  packages/dsh-remote-web-ui
+
+Copyright (c) the dsh-web contributors. Licensed under the Apache License,
+Version 2.0 (see LICENSE).
+
+Modifications made by WJBFks on 2026-11-05:
+
+  - package renamed from @linxin666/dsh-remote-web-ui to wj-dsh-remote;
+  - plugin row id renamed from "remote-web-ui" to "wj-dsh-remote";
+  - route prefixes renamed:
+      /api/pair   -> /api/wj-pair
+      /pair-accept -> /wj-pair-accept
+      /pair-app    -> /wj-pair-app
+      /pair-ping   -> /wj-pair-ping
+      /remote      -> /wj-remote
+  - on-disk and in-browser state renamed to the wj-* namespace:
+      remote-web-ui-devices.json  -> wj-dsh-remote-devices.json
+      remote-web-ui-registry/     -> wj-dsh-remote-registry/
+      x-dsh-remote-device header  -> x-wj-remote-device
+      dsh_pair cookie             -> wj_dsh_pair
+      dsh-remote-force-desktop    -> wj-dsh-remote-force-desktop
+
+Behavioral changes in this revision (0.1.0):
+
+  - relay defaults to false (upstream defaults to true, which makes every
+    install claim a lease on dsh-market.com and publish a public hostname);
+  - the anonymous daily telemetry heartbeat is disabled (upstream posts to
+    https://dsh-market.com/api/telemetry/event);
+  - the browser half's relative /api/pair/* calls were rewritten to
+    /api/wj-pair/* so they follow the renamed route prefix.
+
+The upstream deprecation notice still applies: the browser-facing remote control path this
+fork preserves is retired upstream in favour of @linxin666/dsh-remote-bridge
+(native phone app protocol).
