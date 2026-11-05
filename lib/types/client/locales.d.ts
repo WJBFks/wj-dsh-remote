@@ -54,7 +54,11 @@ export declare const zh: {
     'devices.title': string;
     'devices.level.badge': string;
     'devices.level.label': string;
-    'self.line': string;
+    'self.level': string;
+    'self.id': string;
+    'self.copy': string;
+    'self.copied': string;
+    'identity.only': string;
     'devices.empty': string;
     'devices.unknown': string;
     'devices.online': string;
@@ -207,7 +211,11 @@ export declare const en: {
     'devices.title': string;
     'devices.level.badge': string;
     'devices.level.label': string;
-    'self.line': string;
+    'self.level': string;
+    'self.id': string;
+    'self.copy': string;
+    'self.copied': string;
+    'identity.only': string;
     'devices.empty': string;
     'devices.unknown': string;
     'devices.online': string;

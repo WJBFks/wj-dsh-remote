@@ -37,6 +37,8 @@ export type PanelState = {
         publicId?: string;
         loopback?: boolean;
     };
+    /** Low-level caller: show identity only, no QR/roster/actions. */
+    identityOnly?: boolean;
 };
 /** Full panel props: copy + view state + actions. */
 export interface RemotePanelProps {
