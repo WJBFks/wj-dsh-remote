@@ -77,7 +77,7 @@ export declare function isLoopbackHostname(hostname: string): boolean;
 export declare function isLocalPage(hostname: string, protocol?: string, transportOwnsHost?: boolean): boolean;
 export { REMOTE_DEVICE_HEADER, REMOTE_DEVICE_QUERY };
 /** Connection-plugin method prefix under the gated channel. */
-export declare const REMOTE_API_PREFIX = "/remote/api";
+export declare const REMOTE_API_PREFIX = "/wj-remote/api";
 /**
  * The window global the device-gated app landing publishes to grant host mode.
  * Set by the /wj-pair-app capture script, read by the parse-time boot patch: the

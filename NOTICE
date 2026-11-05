@@ -42,6 +42,12 @@ Additions in 0.1.1:
     routes dsh-market's /dsh-market/* catalog GETs through the paired-device
     channel on non-loopback origins. dsh-market itself is not modified.
 
+Additions in 0.2.0:
+
+  - device permission levels 0..9 (loopback is implicitly 10), a public
+    HMAC-derived device id shown in the panel instead of the cookie, /me and
+    /level endpoints, and level-gated pairing control endpoints.
+
 The upstream deprecation notice still applies: the browser-facing remote control path this
 fork preserves is retired upstream in favour of @linxin666/dsh-remote-bridge
 (native phone app protocol).

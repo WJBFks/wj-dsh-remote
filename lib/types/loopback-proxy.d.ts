@@ -25,7 +25,7 @@ import type { InnerAuth } from './inner-auth.ts';
  *   authority-bound cookie, no loopback exemption on this cohort) accepts
  *   the re-issued request; a 401 answer invalidates the cached credential.
  */
-export declare function proxyLoopbackHttp(req: IncomingMessage, res: ServerResponse, port: number, upstreamPath: string, auth?: InnerAuth): void;
+export declare function proxyLoopbackHttp(req: IncomingMessage, res: ServerResponse, port: number, upstreamPath: string, auth?: InnerAuth, actor?: string): void;
 /**
  * Rebuild a WebSocket handshake as loopback-shaped and pipe both directions.
  * @param req - the already-gated upgrade request.

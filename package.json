@@ -1,6 +1,6 @@
 {
   "name": "wj-dsh-remote",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": false,
   "description": "Personal fork of @linxin666/dsh-remote-web-ui 0.4.14: scan-to-pair remote access for the DeepSeek Harness (dsh) web GUI, renamed to the wj-* namespace so it cannot collide with the upstream plugin.",
   "license": "Apache-2.0",

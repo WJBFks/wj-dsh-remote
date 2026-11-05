@@ -4,7 +4,7 @@ Personal fork of [`@linxin666/dsh-remote-web-ui`](https://github.com/zhu10900936
 
 The fork exists because upstream deprecated the browser-facing remote path in favour of a native-app protocol, and 0.4.14 is the last release that keeps the browser path working on the `dsh 0.2.1` line. Everything is renamed into the `wj-*` namespace so this package can never collide with the upstream plugin.
 
-> **Status:** fork (`0.1.2`) of 0.4.14. Renames only, plus three safety changes: `relay` defaults to **false** (upstream defaults to true and claims a lease on dsh-market.com), the daily telemetry heartbeat is **disabled**, and the browser half's relative `/api/pair/*` calls were rewritten to `/api/wj-pair/*`. Built against `dsh >= 0.2.1-rc.3`; verified on `dsh 0.2.1-rc.5`.
+> **Status:** fork (`0.2.0`) of 0.4.14. Renames only, plus three safety changes: `relay` defaults to **false** (upstream defaults to true and claims a lease on dsh-market.com), the daily telemetry heartbeat is **disabled**, and the browser half's relative `/api/pair/*` calls were rewritten to `/api/wj-pair/*`. Built against `dsh >= 0.2.1-rc.3`; verified on `dsh 0.2.1-rc.5`.
 
 ## What it does
 

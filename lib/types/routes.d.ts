@@ -182,6 +182,8 @@ export declare function appServiceWorkerScript(): string;
 /** Route paths (exact matches under /api). */
 export declare const PAIR_PATHS: {
     readonly issue: "/api/wj-pair/issue";
+    readonly me: "/api/wj-pair/me";
+    readonly level: "/api/wj-pair/level";
     readonly accept: "/api/wj-pair/accept";
     readonly stop: "/api/wj-pair/stop";
     readonly revoke: "/api/wj-pair/revoke";

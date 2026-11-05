@@ -14,7 +14,7 @@
 /** Gated mirror of same-origin fenced paths (`/wj-remote` + original pathname). */
 export declare const REMOTE_PREFIX = "/wj-remote";
 /** Connection-plugin method prefix under the gated channel. */
-export declare const REMOTE_API_PREFIX = "/remote/api";
+export declare const REMOTE_API_PREFIX = "/wj-remote/api";
 /**
  * The gated mirrors of the official client WebSocket paths. On the pinned
  * 0.1.2-alpha.2 line the client opens ONE persistent stream socket — the
@@ -25,13 +25,13 @@ export declare const REMOTE_API_PREFIX = "/remote/api";
  * the one path that must never be missing here.
  */
 export declare const REMOTE_API_PATHS: {
-    readonly mux: "/remote/api/remote.mux";
+    readonly mux: "/wj-remote/api/remote.mux";
 };
 /**
  * Exact upgrade paths registered on webServer (the SDK matches upgrades by
  * exact path, not prefix). Query strings ride on the request URL.
  */
-export declare const REMOTE_UPGRADE_PATHS: readonly ["/remote/api/remote.mux", "/remote/sidebar/ws/terminal", "/remote/sidebar/ws/agent-terminals", "/remote/sidebar/ws/agent-opens", "/remote/api/dsh-ssh/terminal"];
+export declare const REMOTE_UPGRADE_PATHS: readonly ["/wj-remote/api/remote.mux", "/wj-remote/sidebar/ws/terminal", "/wj-remote/sidebar/ws/agent-terminals", "/wj-remote/sidebar/ws/agent-opens", "/wj-remote/api/dsh-ssh/terminal"];
 /** Plugin-manager HTTP prefix: install/remove stay physically local. */
 export declare const PLUGIN_MANAGER_PATH = "/api/plugin-manager";
 /** Family settings-bridge HTTP prefix — re-exposed to paired devices (plain settings parity). */
@@ -55,6 +55,12 @@ export declare const REMOTE_DEVICE_QUERY = "device";
  * dsh-web self-update installer, and plugin install/remove.
  */
 export declare const LOCAL_ONLY_PREFIXES: readonly string[];
+/**
+ * Header the channel stamps with the authenticated device id. The pairing
+ * handlers trust it only behind the channel's own loopback re-issue; client
+ * requests carrying it are stripped by the proxy.
+ */
+export declare const REMOTE_ACTOR_HEADER = "x-wj-remote-actor";
 /**
  * Whether a paired inner path must stay physically local.
  * @param innerPath - the rewritten inner path (e.g. `/api/session.list`).

@@ -3,7 +3,7 @@
 本文件是**仓库级**约定，给接手这个仓库的 agent / 维护者看。主机层面的约定见 `~/AGENTS.md`，
 生产环境的运维背景见 `~/docs/dsh-web-access.md` 和 `~/docs/wj-dsh-remote-cutover.md`（仓库外）。
 
-**当前版本**：`0.1.2`（以 `git log` 为准）
+**当前版本**：`0.2.0`（以 `git log` 为准）
 **基线**：`@linxin666/dsh-remote-web-ui@0.4.14`（上游最后一个支持浏览器远程的版本）
 **已验证 DSH**：`0.2.1-rc.5`（`engines.dsh >= 0.2.1-rc.3`）
 **许可证**：Apache-2.0，来源与修改记录见 `NOTICE`
@@ -197,6 +197,8 @@ systemctl --user restart dsh-web
 - `relay` 默认 `false`；`autoTunnel` 默认 `false`；telemetry 关闭。
 - 不碰 nginx、证书、launch token（`~/.dsh/web-launch-token.secret`）。
 - 不把配对设备描述成"只读"——它是完整控制凭证。
+- 设备等级：loopback 恒为 10；新配对设备 0 级；仅 10 级可改等级（0..9）；9 级可管理
+  低于自己等级的设备、可 mint，但不能 stop/改级；0–8 级看不到管理面板。
 - 不把 `/api/wj-pair`、`/api/update`、`/api/plugin-manager` 加入任何代理白名单。
 
 ---

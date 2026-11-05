@@ -250,7 +250,7 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     lanBind: z<boolean, boolean, "volatile">;
     profile: z<string, string, "plain">;
     enabled: z<boolean, boolean, "volatile-defined">;
-    pairingSource: z<"auto" | "public" | "lan", "auto" | "public" | "lan", "volatile-defined">;
+    pairingSource: z<"public" | "auto" | "lan", "public" | "auto" | "lan", "volatile-defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     tokenTtlMs: z<number, number, "volatile-defined">;
     offlineAfterMs: z<number, number, "volatile-defined">;
@@ -271,7 +271,7 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     lanBind: z<boolean, boolean, "volatile">;
     profile: z<string, string, "plain">;
     enabled: z<boolean, boolean, "volatile-defined">;
-    pairingSource: z<"auto" | "public" | "lan", "auto" | "public" | "lan", "volatile-defined">;
+    pairingSource: z<"public" | "auto" | "lan", "public" | "auto" | "lan", "volatile-defined">;
 }>>, "plain">;
 /**
  * Fully resolved config: every field non-optional except `publicBaseUrl`,

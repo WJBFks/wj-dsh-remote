@@ -63,6 +63,10 @@ export interface DeviceSession {
     createdAt: number;
     /** Last time the device passed a gated request or heartbeat. */
     lastSeenAt: number;
+    /** Public, non-secret identifier shown in the panel instead of the cookie. */
+    publicId: string;
+    /** Permission level 0..9; loopback is implicitly 10 and never stored. */
+    level: number;
     /** Sanitized User-Agent captured at accept (optional; missing on old files). */
     userAgent?: string;
     /**
@@ -75,8 +79,10 @@ export interface DeviceSession {
 }
 /** One device row in a loopback snapshot (ids are session credentials). */
 export interface DeviceSnapshot {
-    /** Cookie value / session credential of this device. */
-    id: string;
+    /** Public, non-secret identifier shown in the panel (never the cookie). */
+    publicId: string;
+    /** Permission level 0..9. */
+    level: number;
     /** Pairing time (ms epoch). */
     createdAt: number;
     /** Last heartbeat or gated request (ms epoch). */
@@ -151,6 +157,10 @@ export interface PairingConfig {
     maxDevices: number;
     /** Cookie name carrying the device id. */
     cookieName: string;
+    /** Pepper used to derive public ids (32 random bytes, never logged). */
+    idPepper: Buffer;
+    /** Level assigned to a newly paired device; defaults to 0. */
+    defaultDeviceLevel?: number;
     /**
      * Idle sessions older than this are deleted (memory and disk). Defaults
      * to {@link DEFAULT_IDLE_EXPIRE_MS} when omitted.
@@ -403,6 +413,15 @@ export declare class PairingService {
     snapshot(): PairingSnapshot;
     /** Whether a cookie value names a currently live (non-idle) device session. */
     hasDevice(deviceId: string): boolean;
+    /** Public identity (publicId + level) of a live device, or undefined. */
+    deviceIdentity(deviceId: string): {
+        publicId: string;
+        level: number;
+    } | undefined;
+    /** Resolve a public id to its cookie id. */
+    idOfPublicId(publicId: string): string | undefined;
+    /** Set one device's level (0..9). Returns false for an unknown public id. */
+    setLevel(publicId: string, level: number): boolean;
     /**
      * Number of device sessions in the table, including idle ones whose idle
      * window has not been swept yet. Restore keeps every persisted session
