@@ -99,6 +99,7 @@ pnpm adapters:check    # CI/发布前检查是否漂移
 |---|---|
 | [AGENTS.md](AGENTS.md) | 维护约定：目录职责、构建/产物约束、适配层规范、验证清单、部署与回滚、安全不变量、已知坑 |
 | [docs/architecture.md](docs/architecture.md) | 运行时架构：两种页面、配对流程、请求改写、通道服务端、配置项 |
+| [docs/build.md](docs/build.md) | 从源码构建 lib/ 的完整步骤（tsdown + lightningcss 工作区） |
 | [docs/upstream-sync.md](docs/upstream-sync.md) | 从上游重新 fork / 移植的逐步指南与陷阱清单 |
 | [src/plugin-adapters/README.md](src/plugin-adapters/README.md) | 插件适配层协议（`adapter.mjs`、生成脚本、只读策略） |
 | [src/plugin-adapters/dsh-market/README.md](src/plugin-adapters/dsh-market/README.md) | dsh-market 适配的根因、验证与边界 |
