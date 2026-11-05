@@ -469,6 +469,8 @@ function pairingFailurePage(): string {
 /** Route paths (exact matches under /api). */
 export const PAIR_PATHS = {
   issue: '/api/wj-pair/issue',
+  me: '/api/wj-pair/me',
+  level: '/api/wj-pair/level',
   accept: '/api/wj-pair/accept',
   stop: '/api/wj-pair/stop',
   revoke: '/api/wj-pair/revoke',
@@ -739,6 +741,65 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
    * shut for the control plane while #1919 opens the phone-facing surface).
    */
   const loopbackFence = (req: IncomingMessage): boolean => isLoopbackClient(req) && isTrustedApiRequest(req, [])
+  /** Header the /wj-remote channel stamps with the authenticated device id. */
+  const ACTOR_HEADER = 'x-wj-remote-actor'
+  interface Actor {
+    /** Effective level: 10 for the loopback desktop, else the stored level. */
+    level: number
+    /** Cookie id, when the request came through the channel. */
+    deviceId?: string
+    /** Public id shown in the panel. */
+    publicId?: string
+    /** True for the physical desktop. */
+    loopback: boolean
+  }
+  /**
+   * Resolve the caller: the channel's actor header names a live device (the
+   * channel authenticated it), otherwise a direct loopback request is the
+   * desktop and holds level 10. Anything else has no identity.
+   */
+  const actorOf = (req: IncomingMessage): Actor | undefined => {
+    const forwarded = req.headers[ACTOR_HEADER]
+    if (typeof forwarded === 'string' && forwarded !== '') {
+      const identity = service.deviceIdentity(forwarded)
+      if (identity === undefined) return undefined
+      return { level: identity.level, deviceId: forwarded, publicId: identity.publicId, loopback: false }
+    }
+    if (isLoopbackClient(req) && isTrustedApiRequest(req, [])) return { level: 10, loopback: true }
+    return undefined
+  }
+  /** Admit a caller at or above one level, answering 403 otherwise. */
+  const requireLevel = (req: IncomingMessage, res: ServerResponse, min: number): Actor | undefined => {
+    const actor = actorOf(req)
+    if (actor === undefined || actor.level < min) {
+      writeJson(res, 403, { ok: false, code: 'forbidden' })
+      return undefined
+    }
+    return actor
+  }
+  /** Resolve a panel-supplied device reference (public id or cookie id). */
+  const targetIdOf = (reference: string): string | undefined =>
+    service.idOfPublicId(reference) ?? (service.deviceIdentity(reference) !== undefined ? reference : undefined)
+  /**
+   * Resolve a management target and enforce the level rule: the caller may
+   * only act on devices strictly below its own level. Loopback is 10, so the
+   * desktop can manage everything stored (0..9); a level-9 admin cannot touch
+   * another 9 or a 10.
+   */
+  const manageableId = (actor: Actor, reference: string, res: ServerResponse): string | undefined => {
+    const id = targetIdOf(reference)
+    const identity = id === undefined ? undefined : service.deviceIdentity(id)
+    if (id === undefined || identity === undefined) {
+      writeJson(res, 404, { ok: false, code: 'unknown-device' })
+      return undefined
+    }
+    if (identity.level >= actor.level) {
+      writeJson(res, 403, { ok: false, code: 'level-too-high' })
+      return undefined
+    }
+    return id
+  }
+
   /**
    * Phone-facing fence: loopback, the service's live LAN literals, configured
    * public host, extra trusted hosts, or dynamically paired hosts. `navigation`
@@ -840,10 +901,8 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
 
   const handleIssue = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!requireMethod(req, res, 'POST')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
     const body = await readJsonBody(req, { maxBytes: MAX_BODY_BYTES, objectOnly: true })
     const payload = parsePairPayload(issuePayloadSchema, body)
     if (payload === undefined) {
@@ -939,10 +998,8 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
 
   const handleStop = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!requireMethod(req, res, 'POST')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 10)
+    if (actor === undefined) return
     const body = await readJsonBody(req, { maxBytes: MAX_BODY_BYTES, objectOnly: true })
     if (parsePairPayload(pairActionPayloadSchema, body) === undefined) {
       writeJson(res, 400, { ok: false, code: 'bad-payload' })
@@ -954,17 +1011,17 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
 
   const handleRevoke = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!requireMethod(req, res, 'POST')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
     const body = await readJsonBody(req, { maxBytes: MAX_BODY_BYTES, objectOnly: true })
     const payload = parsePairPayload(revokePayloadSchema, body)
     if (payload === undefined) {
       writeJson(res, 400, { ok: false, code: 'bad-payload' })
       return
     }
-    const revoked = service.revoke(payload.deviceId)
+    const targetId = manageableId(actor, payload.deviceId, res)
+    if (targetId === undefined) return
+    const revoked = service.revoke(targetId)
     if (!revoked) {
       writeJson(res, 404, { ok: false, code: 'unknown-device' })
       return
@@ -979,17 +1036,17 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
    */
   const handleRename = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!requireMethod(req, res, 'POST')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
     const body = await readJsonBody(req, { maxBytes: MAX_BODY_BYTES, objectOnly: true })
     const payload = parsePairPayload(renamePayloadSchema, body)
     if (payload === undefined) {
       writeJson(res, 400, { ok: false, code: 'bad-payload' })
       return
     }
-    if (!service.rename(payload.deviceId, payload.name)) {
+    const targetId = manageableId(actor, payload.deviceId, res)
+    if (targetId === undefined) return
+    if (!service.rename(targetId, payload.name)) {
       writeJson(res, 404, { ok: false, code: 'unknown-device' })
       return
     }
@@ -1004,17 +1061,21 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
    */
   const handleMerge = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!requireMethod(req, res, 'POST')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
     const body = await readJsonBody(req, { maxBytes: MAX_BODY_BYTES, objectOnly: true })
     const payload = parsePairPayload(mergePayloadSchema, body)
     if (payload === undefined) {
       writeJson(res, 400, { ok: false, code: 'bad-payload' })
       return
     }
-    const merged = service.mergeDuplicates(payload.deviceIds)
+    const mergeIds: string[] = []
+    for (const reference of payload.deviceIds) {
+      const id = manageableId(actor, reference, res)
+      if (id === undefined) return
+      mergeIds.push(id)
+    }
+    const merged = service.mergeDuplicates(mergeIds)
     if (!merged.ok) {
       writeJson(res, merged.code === 'unknown-device' ? 404 : 409, { ok: false, code: merged.code })
       return
@@ -1033,7 +1094,8 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
       writeJson(res, 400, { ok: false, code: 'bad-payload' })
       return
     }
-    const deviceId = readCookie(req.headers.cookie, service.config.cookieName)
+    const actor = actorOf(req)
+    const deviceId = actor?.deviceId ?? readCookie(req.headers.cookie, service.config.cookieName)
     if (deviceId === undefined || !service.heartbeat(deviceId)) {
       writeJson(res, 401, { ok: false, code: 'unpaired' })
       return
@@ -1043,39 +1105,64 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
 
   const handleStatus = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!requireMethod(req, res, 'GET')) return
-    if (!lanFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
+    // Level >= 9 only: the roster (public ids, never cookies) and the self
+    // identity ride this response so the panel needs no loopback origin.
+    const snapshot = service.snapshot()
+    writeJson(res, 200, {
+      ok: true,
+      paired: true,
+      requirePairingForLan: pairingRequired(),
+      ...snapshot,
+      self: {
+        level: actor.level,
+        ...(actor.publicId !== undefined ? { publicId: actor.publicId } : {}),
+        ...(actor.loopback ? { loopback: true } : {}),
+      },
+    })
+  }
+
+  const handleMe = (req: IncomingMessage, res: ServerResponse): void => {
+    if (!requireMethod(req, res, 'GET')) return
+    const actor = requireLevel(req, res, 0)
+    if (actor === undefined) return
+    writeJson(res, 200, {
+      ok: true,
+      level: actor.level,
+      ...(actor.publicId !== undefined ? { publicId: actor.publicId } : {}),
+      loopback: actor.loopback,
+    })
+  }
+
+  /**
+   * Change one device's level. Level 10 only (the loopback desktop); the
+   * stored range is 0..9, so no remote device can ever become 10 and the
+   * desktop stays the single super-admin.
+   */
+  const handleLevel = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    if (!requireMethod(req, res, 'POST')) return
+    const actor = requireLevel(req, res, 10)
+    if (actor === undefined) return
+    const body = await readJsonBody(req, { maxBytes: MAX_BODY_BYTES, objectOnly: true })
+    const record = typeof body === 'object' && body !== null ? body as Record<string, unknown> : undefined
+    const publicId = typeof record?.publicId === 'string' ? record.publicId : ''
+    const level = typeof record?.level === 'number' && Number.isInteger(record.level) ? record.level : -1
+    if (!/^[0-9a-z]{6}$/u.test(publicId) || level < 0 || level > 9) {
+      writeJson(res, 400, { ok: false, code: 'bad-payload' })
       return
     }
-    const deviceId = readCookie(req.headers.cookie, service.config.cookieName)
-    const paired = deviceId !== undefined && service.hasDevice(deviceId)
-    // The desktop (loopback, no forwarding header) keeps the full
-    // pairing-relevant view; the LAN IP literals stay behind a live pairing or
-    // that desktop view so an unauthenticated caller on a tunnel cannot map the
-    // internal network. A phone already knows its usable literal from the URL
-    // it opened. A tunneled visitor reaches this handler now (#1919) and lands
-    // on the minimal branch: reachability for the pairing flow, the snapshot
-    // only for the desktop or a live device.
-    const local = isLoopbackClient(req)
-    const snapshot = service.snapshot()
-    // Unpaired LAN/tunnel clients get only the pairing-relevant fields; the
-    // token expiry, public tunnel URL, and counts are an oracle for targeting
-    // and stay behind a live device cookie. The per-device roster (ids are
-    // session credentials) is never returned here — only the loopback events
-    // stream carries it to the desktop panel.
-    const { devices: _devices, ...rest } = snapshot
-    const visible = paired || local
-      ? rest
-      : { phase: snapshot.phase, lanAvailable: snapshot.lanAvailable }
-    writeJson(res, 200, { ok: true, paired, requirePairingForLan: pairingRequired(), ...visible })
+    if (!service.setLevel(publicId, level)) {
+      writeJson(res, 404, { ok: false, code: 'unknown-device' })
+      return
+    }
+    writeJson(res, 200, { ok: true })
   }
 
   const handleEvents = (req: IncomingMessage, res: ServerResponse): void => {
     if (!requireMethod(req, res, 'GET')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
     events.open(req, res)
     // Snapshot on open: a late-opening panel converges without history.
     events.push(service.snapshot())
@@ -1084,10 +1171,8 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
   /** LAN-bind facts for the settings card; loopback-only, read per request. */
   const handleLanBind = (req: IncomingMessage, res: ServerResponse): void => {
     if (!requireMethod(req, res, 'GET')) return
-    if (!loopbackFence(req)) {
-      writeJson(res, 403, { ok: false, code: 'forbidden' })
-      return
-    }
+    const actor = requireLevel(req, res, 9)
+    if (actor === undefined) return
     writeJson(res, 200, { ok: true, ...(deps.lanBindStatus?.() ?? {}) })
   }
 
@@ -1285,6 +1370,8 @@ export function makeRoutes(deps: PairRoutesDeps): WebRoute[] {
 
   const routes: WebRoute[] = [
     { kind: 'exact', path: PAIR_PATHS.issue, handler: handleIssue },
+    { kind: 'exact', path: PAIR_PATHS.me, handler: handleMe },
+    { kind: 'exact', path: PAIR_PATHS.level, handler: handleLevel },
     { kind: 'exact', path: PAIR_PATHS.accept, handler: handleAccept },
     { kind: 'exact', path: PAIR_PATHS.stop, handler: handleStop },
     { kind: 'exact', path: PAIR_PATHS.revoke, handler: handleRevoke },

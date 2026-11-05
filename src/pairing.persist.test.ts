@@ -17,6 +17,7 @@ const BASE_CONFIG: Omit<PairingConfig, 'devicesFile'> = {
   maxDevices: 4,
   idleExpireMs: DEFAULT_IDLE_EXPIRE_MS,
   cookieName: 'wj_dsh_pair',
+  idPepper: Buffer.alloc(32, 7),
 }
 
 /** Deterministic clock: tokens are issued in a fixed, readable sequence. */

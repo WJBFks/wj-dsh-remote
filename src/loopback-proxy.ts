@@ -13,6 +13,7 @@
  */
 
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'node:http'
+import { REMOTE_ACTOR_HEADER } from './remote-methods.ts'
 import { request as httpRequest } from 'node:http'
 import { connect } from 'node:net'
 import type { Duplex } from 'node:stream'
@@ -112,7 +113,7 @@ function nominatedHeaders(connection: string | string[] | undefined): Set<string
  * @param cookie - the inner credential, when one resolved.
  * @returns headers to send to 127.0.0.1.
  */
-function forwardedRequestHeaders(req: IncomingMessage, port: number, cookie: string | undefined): Record<string, string> {
+function forwardedRequestHeaders(req: IncomingMessage, port: number, cookie: string | undefined, actor?: string): Record<string, string> {
   const nominated = nominatedHeaders(req.headers.connection)
   const headers: Record<string, string> = {}
   for (let index = 0; index + 1 < req.rawHeaders.length; index += 2) {
@@ -128,6 +129,8 @@ function forwardedRequestHeaders(req: IncomingMessage, port: number, cookie: str
   headers.host = `127.0.0.1:${String(port)}`
   headers['sec-fetch-site'] = 'same-origin'
   if (cookie !== undefined) headers.cookie = cookie
+  delete headers[REMOTE_ACTOR_HEADER]
+  if (actor !== undefined) headers[REMOTE_ACTOR_HEADER] = actor
   return headers
 }
 
@@ -158,10 +161,11 @@ export function proxyLoopbackHttp(
   port: number,
   upstreamPath: string,
   auth?: InnerAuth,
+  actor?: string,
 ): void {
   void Promise.resolve(auth?.ready())
     .catch(() => undefined)
-    .then((cookie) => { pipeLoopbackHttp(req, res, port, upstreamPath, auth, typeof cookie === 'string' ? cookie : undefined) })
+    .then((cookie) => { pipeLoopbackHttp(req, res, port, upstreamPath, auth, typeof cookie === 'string' ? cookie : undefined, actor) })
 }
 
 function pipeLoopbackHttp(
@@ -171,8 +175,9 @@ function pipeLoopbackHttp(
   upstreamPath: string,
   auth: InnerAuth | undefined,
   cookie: string | undefined,
+  actor: string | undefined,
 ): void {
-  const headers = forwardedRequestHeaders(req, port, cookie)
+  const headers = forwardedRequestHeaders(req, port, cookie, actor)
 
   const upstream = httpRequest({
     host: '127.0.0.1',

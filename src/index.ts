@@ -22,6 +22,7 @@ import type {} from '@deepseek-ai/dsh-commands'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import { DEFAULT_IDLE_EXPIRE_MS, PairingService, type PairingConfig } from './pairing.ts'
 import { dshHome } from './dsh-home.ts'
+import { loadIdPepper } from './device-id.ts'
 import { isPairedDeviceRequest, makeGateListener } from './gate.ts'
 import { RemoteWebUiPairing } from './pairing-access.ts'
 import { isTrustedApiRequest, makeRoutes, PAIRING_SOURCE_OPTIONS, type PairingSourcePreference } from './routes.ts'
@@ -287,7 +288,7 @@ export const Config = z.object({
   cfApiToken: z.string().role('secret').volatile(),
   cfAccountId: z.string().volatile(),
   cfTunnelId: z.string().volatile(),
-  relay: z.boolean().default(true).volatile(),
+  relay: z.boolean().default(false).volatile(),
   lanBind: z.boolean().volatile(),
   profile: z.string().pattern(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
   enabled: z.boolean().default(true).volatile(),
@@ -399,12 +400,20 @@ export function pairingConfigOf(resolved: Pick<
     idleExpireMs: resolved.idleExpireMs,
     cookieName: resolved.cookieName,
     devicesFile: resolved.devicesFile,
+    idPepper: idPepper(),
   }
 }
 
 /** Default paired-session store: `$DSH_HOME/wj-dsh-remote-devices.json`. */
 export function defaultDevicesFile(home: string = dshHome()): string {
   return join(home, 'wj-dsh-remote-devices.json')
+}
+
+/** Per-install pepper for public ids; loaded once per process. */
+let cachedIdPepper: Buffer | undefined
+function idPepper(): Buffer {
+  cachedIdPepper ??= loadIdPepper(dshHome())
+  return cachedIdPepper
 }
 
 /** Schema defaults, re-read for hand-built test contexts (the loader applies them normally). */
@@ -424,7 +433,7 @@ const DEFAULTS: ResolvedConfig = {
   cfApiToken: undefined,
   cfAccountId: undefined,
   cfTunnelId: undefined,
-  relay: true,
+  relay: false,
   lanBind: undefined,
   profile: resolveManagedProfile(undefined, undefined, process.env.DSH_PROFILE),
   enabled: true,

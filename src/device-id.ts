@@ -6,7 +6,8 @@
  * per-install pepper, so the host can prove "this public id belongs to that
  * cookie" while the public id itself cannot be turned back into a credential.
  *
- * Format: 12 characters of Crockford base32 (no i/l/o/u), ~60 bits.
+ * Format: 6 characters of Crockford base32 (no i/l/o/u), 30 bits — enough for a
+ * handful of devices and far from a credential.
  */
 
 import { createHmac, randomBytes } from 'node:crypto'
@@ -17,7 +18,7 @@ import { dirname, join } from 'node:path'
 const ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz'
 
 /** Displayed length; 12 × 5 bits = 60 bits. */
-export const PUBLIC_ID_LENGTH = 12
+export const PUBLIC_ID_LENGTH = 6
 
 /** File holding the pepper, relative to DSH_HOME. */
 export const PEPPER_FILE = 'wj-dsh-remote-id-pepper'

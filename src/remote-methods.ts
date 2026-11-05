@@ -69,10 +69,16 @@ export const REMOTE_DEVICE_QUERY = 'device'
  * dsh-web self-update installer, and plugin install/remove.
  */
 export const LOCAL_ONLY_PREFIXES: readonly string[] = [
-  '/api/wj-pair',
   '/api/update',
   PLUGIN_MANAGER_PATH,
 ] as const
+
+/**
+ * Header the channel stamps with the authenticated device id. The pairing
+ * handlers trust it only behind the channel's own loopback re-issue; client
+ * requests carrying it are stripped by the proxy.
+ */
+export const REMOTE_ACTOR_HEADER = 'x-wj-remote-actor'
 
 /**
  * Whether a paired inner path must stay physically local.

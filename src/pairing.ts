@@ -26,6 +26,7 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node
 import { dirname } from 'node:path'
 import type { PostureHost, PostureSnapshot } from './posture.ts'
 import { sameIngressFrame, type IngressSyncFrame } from './ingress-sync.ts'
+import { publicIdOf } from './device-id.ts'
 
 /** The observable pairing phases the panel renders. */
 export type PairingPhase =
@@ -77,6 +78,10 @@ export interface DeviceSession {
   createdAt: number
   /** Last time the device passed a gated request or heartbeat. */
   lastSeenAt: number
+  /** Public, non-secret identifier shown in the panel instead of the cookie. */
+  publicId: string
+  /** Permission level 0..9; loopback is implicitly 10 and never stored. */
+  level: number
   /** Sanitized User-Agent captured at accept (optional; missing on old files). */
   userAgent?: string
   /**
@@ -90,8 +95,10 @@ export interface DeviceSession {
 
 /** One device row in a loopback snapshot (ids are session credentials). */
 export interface DeviceSnapshot {
-  /** Cookie value / session credential of this device. */
-  id: string
+  /** Public, non-secret identifier shown in the panel (never the cookie). */
+  publicId: string
+  /** Permission level 0..9. */
+  level: number
   /** Pairing time (ms epoch). */
   createdAt: number
   /** Last heartbeat or gated request (ms epoch). */
@@ -170,6 +177,10 @@ export interface PairingConfig {
   maxDevices: number
   /** Cookie name carrying the device id. */
   cookieName: string
+  /** Pepper used to derive public ids (32 random bytes, never logged). */
+  idPepper: Buffer
+  /** Level assigned to a newly paired device; defaults to 0. */
+  defaultDeviceLevel?: number
   /**
    * Idle sessions older than this are deleted (memory and disk). Defaults
    * to {@link DEFAULT_IDLE_EXPIRE_MS} when omitted.
@@ -295,18 +306,28 @@ export class PairingService {
       for (const [deviceId, session] of Object.entries(saved)) {
         if (typeof deviceId !== 'string') continue
         if (typeof session !== 'object' || session === null) continue
-        const { createdAt, lastSeenAt, userAgent, name } = session as {
+        const { createdAt, lastSeenAt, userAgent, name, publicId, level } = session as {
           createdAt?: unknown
           lastSeenAt?: unknown
           userAgent?: unknown
           name?: unknown
+          publicId?: unknown
+          level?: unknown
         }
         if (typeof createdAt !== 'number' || typeof lastSeenAt !== 'number') continue
         const label = typeof userAgent === 'string' ? sanitizeUserAgent(userAgent) : undefined
         const customName = typeof name === 'string' ? sanitizeDeviceName(name) : undefined
+        const savedPublicId = typeof publicId === 'string' && /^[0-9a-z]{6}$/u.test(publicId)
+          ? publicId
+          : publicIdOf(this.config.idPepper, deviceId)
+        const savedLevel = typeof level === 'number' && Number.isInteger(level) && level >= 0 && level <= 9
+          ? level
+          : (this.config.defaultDeviceLevel ?? 0)
         this.devices.set(deviceId, {
           createdAt,
           lastSeenAt,
+          publicId: savedPublicId,
+          level: savedLevel,
           ...(label !== undefined ? { userAgent: label } : {}),
           ...(customName !== undefined ? { name: customName } : {}),
         })
@@ -516,6 +537,8 @@ export class PairingService {
     this.devices.set(deviceId, {
       createdAt: now,
       lastSeenAt: now,
+      publicId: publicIdOf(this.config.idPepper, deviceId),
+      level: this.config.defaultDeviceLevel ?? 0,
       ...(label !== undefined ? { userAgent: label } : {}),
     })
     this.persist()
@@ -544,7 +567,8 @@ export class PairingService {
    */
   revoke(deviceId: string): boolean {
     if (this.stopped) return false
-    if (!this.devices.delete(deviceId)) return false
+    const target = this.devices.has(deviceId) ? deviceId : this.idOfPublicId(deviceId)
+    if (target === undefined || !this.devices.delete(target)) return false
     this.persistRevocation()
     this.notify()
     return true
@@ -560,7 +584,8 @@ export class PairingService {
    * @returns true when a live session was renamed.
    */
   rename(deviceId: string, name: string): boolean {
-    const session = this.liveSession(deviceId)
+    const resolved = this.devices.has(deviceId) ? deviceId : this.idOfPublicId(deviceId)
+    const session = resolved === undefined ? undefined : this.liveSession(resolved)
     if (session === undefined) return false
     const cleaned = sanitizeDeviceName(name)
     if (cleaned === undefined) delete session.name
@@ -588,7 +613,7 @@ export class PairingService {
    */
   mergeDuplicates(deviceIds: readonly string[]): MergeDevicesResult {
     if (this.stopped) return { ok: false, code: 'unknown-device' }
-    const ids = [...new Set(deviceIds)]
+    const ids = [...new Set(deviceIds.map(id => (this.devices.has(id) ? id : this.idOfPublicId(id) ?? id)))]
     if (ids.length < 2) return { ok: false, code: 'not-duplicates' }
     const sessions: DeviceSession[] = []
     for (const id of ids) {
@@ -693,6 +718,32 @@ export class PairingService {
     return this.liveSession(deviceId) !== undefined
   }
 
+  /** Public identity (publicId + level) of a live device, or undefined. */
+  deviceIdentity(deviceId: string): { publicId: string; level: number } | undefined {
+    const session = this.liveSession(deviceId)
+    return session === undefined ? undefined : { publicId: session.publicId, level: session.level }
+  }
+
+  /** Resolve a public id to its cookie id. */
+  idOfPublicId(publicId: string): string | undefined {
+    for (const [id, session] of this.devices) {
+      if (session.publicId === publicId) return id
+    }
+    return undefined
+  }
+
+  /** Set one device's level (0..9). Returns false for an unknown public id. */
+  setLevel(publicId: string, level: number): boolean {
+    const id = this.idOfPublicId(publicId)
+    if (id === undefined) return false
+    const session = this.devices.get(id)
+    if (session === undefined) return false
+    session.level = Math.max(0, Math.min(9, Math.trunc(level)))
+    this.persist()
+    this.notify()
+    return true
+  }
+
   /**
    * Number of device sessions in the table, including idle ones whose idle
    * window has not been swept yet. Restore keeps every persisted session
@@ -736,9 +787,10 @@ export class PairingService {
     return session
   }
 
-  private toDeviceSnapshot(id: string, session: DeviceSession, now: number): DeviceSnapshot {
+  private toDeviceSnapshot(_id: string, session: DeviceSession, now: number): DeviceSnapshot {
     return {
-      id,
+      publicId: session.publicId,
+      level: session.level,
       createdAt: session.createdAt,
       lastSeenAt: session.lastSeenAt,
       online: this.isOnlineAt(session, now),
@@ -797,7 +849,8 @@ function devicesEqual(a: readonly DeviceSnapshot[], b: readonly DeviceSnapshot[]
   return a.length === b.length && a.every((device, index) => {
     const other = b[index]
     return other !== undefined
-      && device.id === other.id
+      && device.publicId === other.publicId
+      && device.level === other.level
       && device.createdAt === other.createdAt
       && device.lastSeenAt === other.lastSeenAt
       && device.online === other.online
