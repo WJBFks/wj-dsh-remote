@@ -18,7 +18,11 @@
    `/dsh-market/*` 不在其中，所以这些请求**没有**进入 `/wj-remote` 通道；
    一旦进入通道，Host 会被改写成 loopback 并带上进程内凭证，市场的校验就会放行。
 
-**为什么只放只读接口**：
+**为什么只放只读接口 + 少量 UI 偏好**：
+
+`sidebar-entry`、`favorite`、`note`、`entry-visibility` 是面板自己的显示/收藏/备注偏好，
+只改市场自身状态、不碰宿主，放行是为了让设置页在公网可用；安装/更新/卸载仍然只允许 loopback。
+
 
 `install` / `update` / `remove` / `restart` / `rollback` / `cancel` 等写接口若也代理，
 已配对设备就能远程安装任意 npm 插件 —— 从“能聊天、改文件”升级为“能执行任意插件代码”。

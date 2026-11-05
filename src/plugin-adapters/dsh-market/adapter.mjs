@@ -55,6 +55,13 @@ export default {
     'build-env',
     'channel',
     'entry-visibility',
+    // UI preferences (the settings-page sidebar tip and the card actions).
+    // They mutate only the market's own visibility/favourite/note state, not
+    // the host: allowed so the panel is usable remotely. Install/update/remove
+    // stay out on purpose.
+    'sidebar-entry',
+    'favorite',
+    'note',
     'github-proxy',
     'api/v1/capabilities',
   ],
