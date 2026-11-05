@@ -4,7 +4,7 @@ Personal fork of [`@linxin666/dsh-remote-web-ui`](https://github.com/zhu10900936
 
 The fork exists because upstream deprecated the browser-facing remote path in favour of a native-app protocol, and 0.4.14 is the last release that keeps the browser path working on the `dsh 0.2.1` line. Everything is renamed into the `wj-*` namespace so this package can never collide with the upstream plugin.
 
-> **Status:** fork (`0.1.0`) of 0.4.14. Renames only, plus three safety changes: `relay` defaults to **false** (upstream defaults to true and claims a lease on dsh-market.com), the daily telemetry heartbeat is **disabled**, and the browser half's relative `/api/pair/*` calls were rewritten to `/api/wj-pair/*`. Built against `dsh >= 0.2.1-rc.3`; verified on `dsh 0.2.1-rc.5`.
+> **Status:** fork (`0.1.1`) of 0.4.14. Renames only, plus three safety changes: `relay` defaults to **false** (upstream defaults to true and claims a lease on dsh-market.com), the daily telemetry heartbeat is **disabled**, and the browser half's relative `/api/pair/*` calls were rewritten to `/api/wj-pair/*`. Built against `dsh >= 0.2.1-rc.3`; verified on `dsh 0.2.1-rc.5`.
 
 ## What it does
 
@@ -61,12 +61,44 @@ All other config keys are the upstream ones (`cookieName`, `pairTtlMs`, `devices
 
 `/remote-bridge/pair/token` (relay bridge control-plane path) is intentionally left untouched.
 
+
+## 插件适配（plugin adapters）
+
+`src/plugin-adapters/` 存放第三方插件与远程通道之间的适配声明，每个插件一个子目录
+（例如 `dsh-market/`）。第三方插件本身一行不改。
+
+为什么需要：远程通道只改写白名单内的同源路径。DSH 自己的 `/api/`、`/sidebar/`、`/git/`、`/pet/`
+已在白名单里，但第三方插件如果把路由挂在其他精确前缀上（`dsh-market` 就是 `/dsh-market/*`），
+这些请求不会进入通道，会带着公网 Host 直达插件，被插件自己的 loopback 校验拒绝。
+
+一个适配就是 `adapter.mjs` 里的 `prefix` + 只读 `allow` 列表：
+
+```js
+export default {
+  id: 'dsh-market',
+  prefix: '/dsh-market',
+  allow: ['registry', 'status', 'installed', 'updates', /* ... 只读路径 */],
+}
+```
+
+仓库发布预编译 `lib/`，所以适配通过一个生成脚本注入两处（浏览器 fetch 规则 + 服务端注入的
+boot 脚本）：
+
+```bash
+pnpm adapters:sync     # 幂等重生成
+pnpm adapters:check    # CI/发布前检查是否漂移
+```
+
+`prepack` 会自动执行 `adapters:sync`。写操作（安装/更新/卸载/重启）默认**不**放行：把写接口
+代理进通道等于让已配对设备可以远程安装任意 npm 插件，属于权限升级。
+
 ## Known limitations
 
 - Upstream keeps the browser path frozen; `dsh 0.2.2+` will need compatibility work here.
 - The client half targets official DOM semantic suffixes (`[class$="_composerSeat"]` etc.); official UI renames can break the touch layer.
 - The package still declares upstream's `dependencies`; the browser bundle is prebuilt in `lib/`.
 - Upstream's relay/tunnel integration still points at the author's `dsh-market.com` infrastructure; it is disabled by default here, and enabling it is opt-in.
+- `dsh-market`'s **install/update** buttons still require a loopback page (by design); only its read-only catalog routes ride the remote channel — see below.
 
 ## License and attribution
 

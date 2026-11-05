@@ -36,6 +36,12 @@ Behavioral changes in this revision (0.1.0):
   - the browser half's relative /api/pair/* calls were rewritten to
     /api/wj-pair/* so they follow the renamed route prefix.
 
+Additions in 0.1.1:
+
+  - src/plugin-adapters/ + scripts/adapters-sync.mjs: a read-only adapter that
+    routes dsh-market's /dsh-market/* catalog GETs through the paired-device
+    channel on non-loopback origins. dsh-market itself is not modified.
+
 The upstream deprecation notice still applies: the browser-facing remote control path this
 fork preserves is retired upstream in favour of @linxin666/dsh-remote-bridge
 (native phone app protocol).

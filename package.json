@@ -1,6 +1,6 @@
 {
   "name": "wj-dsh-remote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Personal fork of @linxin666/dsh-remote-web-ui 0.4.14: scan-to-pair remote access for the DeepSeek Harness (dsh) web GUI, renamed to the wj-* namespace so it cannot collide with the upstream plugin.",
   "license": "Apache-2.0",
@@ -8,6 +8,11 @@
   "icon": "icon.svg",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
+  "scripts": {
+    "adapters:sync": "node scripts/adapters-sync.mjs",
+    "adapters:check": "node scripts/adapters-sync.mjs --check",
+    "prepack": "node scripts/adapters-sync.mjs"
+  },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
   },
