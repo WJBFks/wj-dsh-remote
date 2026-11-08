@@ -31,14 +31,6 @@ export type PanelState = {
     relay?: RelayStatusFrame;
     /** Latest /api posture probe, once a round has completed. */
     posture?: PostureFrame;
-    /** Caller identity: public id + effective level. */
-    self?: {
-        level: number;
-        publicId?: string;
-        loopback?: boolean;
-    };
-    /** Low-level caller: show identity only, no QR/roster/actions. */
-    identityOnly?: boolean;
 };
 /** Full panel props: copy + view state + actions. */
 export interface RemotePanelProps {
@@ -57,13 +49,11 @@ export interface RemotePanelProps {
     onRename(deviceId: string, name: string): Promise<boolean>;
     /** Collapse a same-User-Agent group; false when the host refused it. */
     onMerge(deviceIds: string[]): Promise<boolean>;
-    /** Change one device's level; false when the host refused it. */
-    onSetLevel(publicId: string, level: number): Promise<boolean>;
 }
 /**
  * Render the pairing panel.
  * @param props - copy, state, and actions.
  * @returns the panel element tree.
  */
-export declare function RemotePanel({ t, state, copied, copiedToken, onClose, onStop, onRefresh, onCopy, onCopyToken, onRevoke, onRename, onMerge, onSetLevel, }: RemotePanelProps): import("react").JSX.Element;
+export declare function RemotePanel({ t, state, copied, copiedToken, onClose, onStop, onRefresh, onCopy, onCopyToken, onRevoke, onRename, onMerge, }: RemotePanelProps): import("react").JSX.Element;
 //# sourceMappingURL=RemotePanel.d.ts.map

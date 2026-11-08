@@ -119,19 +119,10 @@ export interface PairStateFrame {
     relay?: RelayStatusFrame;
     /** Latest /api fence posture probe, once a round has completed. */
     posture?: PostureFrame;
-    /** The caller's own identity (public id + level). */
-    self?: {
-        level: number;
-        publicId?: string;
-        loopback?: boolean;
-    };
 }
-/** One authorized-device row from the status stream. */
+/** One authorized-device row from the loopback status stream. */
 export interface DeviceFrame {
-    /** Public, non-secret id shown in the panel. */
-    publicId: string;
-    /** Permission level 0..9. */
-    level: number;
+    id: string;
     createdAt: number;
     lastSeenAt: number;
     online: boolean;
@@ -159,14 +150,6 @@ export declare function issuePair(address?: string): Promise<IssueResponse>;
 export declare function acceptPair(token: string): Promise<{
     ok: true;
 } | AcceptFailure>;
-/** The caller's own identity (public id + level). */
-export declare function fetchMe(): Promise<{
-    level: number;
-    publicId?: string;
-    loopback?: boolean;
-} | undefined>;
-/** Change one device's level (level 10 / loopback only). */
-export declare function setPairLevel(publicId: string, level: number): Promise<boolean>;
 /** Revoke mobile access (paired devices + the current token). */
 export declare function stopPair(): Promise<void>;
 /**

@@ -35,7 +35,8 @@ const escapeSlash = (value) => value.replace(/\//g, '\\/')
 /** Build the anchored regex source for one adapter (used verbatim in a literal). */
 function regexSourceOf(adapter) {
   const prefix = escapeSlash(escapeRegex(adapter.prefix))
-  const allow = adapter.allow.map((item) => escapeSlash(escapeRegex(item))).join('|')
+  const paths = [...adapter.allow, ...(Array.isArray(adapter.gated) ? adapter.gated : [])]
+  const allow = paths.map((item) => escapeSlash(escapeRegex(item))).join('|')
   return `^${prefix}\\/(?:${allow})(?:\\/|$)`
 }
 
@@ -58,7 +59,8 @@ async function loadAdapters() {
     if (typeof adapter.id !== 'string' || adapter.id === '') throw new Error(`${file}: id is required`)
     if (typeof adapter.prefix !== 'string' || !adapter.prefix.startsWith('/')) throw new Error(`${file}: prefix must be an absolute path`)
     if (!Array.isArray(adapter.allow) || adapter.allow.length === 0) throw new Error(`${file}: allow must be a non-empty array`)
-    for (const item of adapter.allow) {
+    if (adapter.gated !== undefined && !Array.isArray(adapter.gated)) throw new Error(`${file}: gated must be an array`)
+    for (const item of [...adapter.allow, ...(adapter.gated ?? [])]) {
       if (typeof item !== 'string' || item === '' || item.startsWith('/')) {
         throw new Error(`${file}: allow entries are relative path segments, got ${JSON.stringify(item)}`)
       }

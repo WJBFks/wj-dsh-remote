@@ -47,3 +47,13 @@ curl -s -b "wj_dsh_pair=<device-id>" \
 **注意**：市场自身的 `sameOrigin` 校验允许“没有 Origin 头”的请求（源码注释里写明，
 为兼容 Desktop 代理），而 `/wj-remote` 通道会丢弃 `Origin`/`Referer` 并补
 `sec-fetch-site: same-origin`，所以即使将来放开写接口，CSRF 语义也不会被绕过。
+
+## Admin actions (0.4.1)
+
+`install` / `update` / `uninstall` / `restart` / `rollback` 等写操作现在也走通道，
+但**只有等级 ≥ 9 的配对设备**可以执行：`src/remote-api.ts` 的
+`marketAdminDenial` 在转发前检查 `deviceIdentity(deviceId).level`，低等级设备
+收到 403（"market install and other mutating actions require device level 9"）。
+这样既修好了公网 origin 下市场安装报 "untrusted origin"，又不把「安装任意插件」
+下放给只读设备。`adapter.mjs#gated` 与 `remote-api.ts#MARKET_ADMIN_ACTIONS`
+两份清单需保持一致。

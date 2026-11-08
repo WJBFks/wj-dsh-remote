@@ -57,6 +57,39 @@ export { REMOTE_API_PREFIX } from './remote-methods.ts'
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'])
 
+/**
+ * Mutating dsh-market actions that may ride the channel, but only for admin
+ * devices. Mirror of `src/plugin-adapters/dsh-market/adapter.mjs#gated`; keep
+ * both lists in sync (`pnpm adapters:check` verifies the rewrite side).
+ */
+const MARKET_ADMIN_ACTIONS = new Set([
+  'install', 'uninstall', 'update', 'restart', 'rollback', 'cancel', 'toggle',
+  'block', 'dismiss-broken', 'restore', 'restore-snapshot', 'delete-snapshot',
+  'backup', 'setup-pnpm', 'migrate-source', 'approve-builds', 'self-uninstall',
+  'host-recovery', 'host-recovery/restore', 'update-exempt', 'use-skin',
+  'webdav', 'gist', 'region', 'api/v1/restart', 'api/v1/rollback',
+])
+
+/** Minimum device level for the market's mutating actions. */
+const MARKET_ADMIN_MIN_LEVEL = 9
+
+/**
+ * Refuse a gated market action unless the device holds admin level.
+ * @param inner - loopback path the channel would re-issue.
+ * @param deviceId - authenticated paired device id.
+ * @param service - pairing service owning the level table.
+ * @returns a denial reason, or undefined when the request may pass.
+ */
+export function marketAdminDenial(inner: string, deviceId: string, service: PairingService): string | undefined {
+  const prefix = '/dsh-market/'
+  if (!inner.startsWith(prefix)) return undefined
+  const action = inner.slice(prefix.length)
+  if (!MARKET_ADMIN_ACTIONS.has(action)) return undefined
+  const level = service.deviceIdentity(deviceId)?.level ?? 0
+  if (level >= MARKET_ADMIN_MIN_LEVEL) return undefined
+  return 'market install and other mutating actions require device level 9 or above'
+}
+
 /** Reject traversal and empty segments; allow plugin file-path characters. */
 function isSafeSegment(segment: string): boolean {
   if (segment === '') return false
@@ -177,6 +210,12 @@ export function makeRemoteApiRoutes(deps: RemoteApiDeps): WebRoute[] {
     if (denied !== undefined) {
       req.resume()
       envelopeError(res, 403, 'invalid-request', 'forbidden', denied)
+      return
+    }
+    const marketDenied = marketAdminDenial(inner, paired, service)
+    if (marketDenied !== undefined) {
+      req.resume()
+      envelopeError(res, 403, 'invalid-request', 'forbidden', marketDenied)
       return
     }
 
