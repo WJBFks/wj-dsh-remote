@@ -47,7 +47,7 @@ export interface PairGatePolicy {
 
 /** Read the host-authoritative desktop pairing policy. */
 export async function readPairGatePolicy(): Promise<PairGatePolicy> {
-  const response = await fetch('api/pair/status')
+  const response = await fetch('api/wj-pair/status')
   if (!response.ok) throw new Error(`wj-dsh-remote: status failed with ${String(response.status)}`)
   const value = await response.json() as { requirePairingForLan?: unknown }
   if (typeof value.requirePairingForLan !== 'boolean') {
@@ -121,7 +121,7 @@ function wireNumber(value: unknown): number | undefined {
  * @returns the frame, or undefined when the view carries none (or is unreadable).
  */
 export async function readIngressStatus(): Promise<IngressStatusFrame | undefined> {
-  const response = await fetch('api/pair/status')
+  const response = await fetch('api/wj-pair/status')
   if (!response.ok) return undefined
   const value = await response.json() as { ingress?: unknown }
   const raw = value.ingress
@@ -191,7 +191,7 @@ export interface DeviceFrame {
  * origin — the panel is a desktop control endpoint).
  */
 export async function issuePair(address?: string): Promise<IssueResponse> {
-  const response = await fetch('api/pair/issue', {
+  const response = await fetch('api/wj-pair/issue', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -214,7 +214,7 @@ export async function issuePair(address?: string): Promise<IssueResponse> {
  * @returns the wire result.
  */
 export async function acceptPair(token: string): Promise<{ ok: true } | AcceptFailure> {
-  const response = await fetch('api/pair/accept', {
+  const response = await fetch('api/wj-pair/accept', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ token }),
@@ -228,7 +228,7 @@ export async function acceptPair(token: string): Promise<{ ok: true } | AcceptFa
 
 /** Revoke mobile access (paired devices + the current token). */
 export async function stopPair(): Promise<void> {
-  const response = await fetch('api/pair/stop', { method: 'POST' })
+  const response = await fetch('api/wj-pair/stop', { method: 'POST' })
   if (!response.ok) throw new Error(`wj-dsh-remote: stop failed with ${String(response.status)}`)
 }
 
@@ -237,7 +237,7 @@ export async function stopPair(): Promise<void> {
  * @param deviceId - the session id of the row to drop.
  */
 export async function revokePair(deviceId: string): Promise<void> {
-  const response = await fetch('api/pair/revoke', {
+  const response = await fetch('api/wj-pair/revoke', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ deviceId }),
@@ -254,7 +254,7 @@ export async function revokePair(deviceId: string): Promise<void> {
  * @returns true when the host stored the label; false for an unknown row.
  */
 export async function renamePair(deviceId: string, name: string): Promise<boolean> {
-  const response = await fetch('api/pair/rename', {
+  const response = await fetch('api/wj-pair/rename', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ deviceId, name }),
@@ -272,7 +272,7 @@ export async function renamePair(deviceId: string, name: string): Promise<boolea
  *   group (unknown row, or not one User-Agent).
  */
 export async function mergePairDevices(deviceIds: readonly string[]): Promise<string | undefined> {
-  const response = await fetch('api/pair/merge', {
+  const response = await fetch('api/wj-pair/merge', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ deviceIds }),
@@ -289,7 +289,7 @@ export async function mergePairDevices(deviceIds: readonly string[]): Promise<st
  *   proves this page is not paired (see {@link shouldStopHeartbeat}).
  */
 export async function sendHeartbeat(): Promise<number> {
-  const response = await fetch('api/pair/heartbeat', { method: 'POST' })
+  const response = await fetch('api/wj-pair/heartbeat', { method: 'POST' })
   return response.status
 }
 
@@ -409,7 +409,7 @@ export class LanBindStatusError extends Error {
 
 /** Read the LAN-bind facts (loopback-only endpoint). */
 export async function readLanBindStatus(): Promise<LanBindFrame> {
-  const response = await fetch('api/pair/lan-bind')
+  const response = await fetch('api/wj-pair/lan-bind')
   if (!response.ok) throw new LanBindStatusError(response.status, `wj-dsh-remote: lan-bind status failed with ${String(response.status)}`)
   return await response.json() as LanBindFrame
 }

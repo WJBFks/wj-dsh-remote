@@ -123,7 +123,7 @@ export function RemoteEntry({ wide, t }: RemoteEntryProps) {
     // unreachable origins are fenced out of the events endpoint, so opening
     // it there would just start a doomed reconnect loop.
     if (next.kind !== 'ready' && next.kind !== 'lan-required') return
-    const source = new EventSource('api/pair/events')
+    const source = new EventSource('api/wj-pair/events')
     eventSource.current = source
     source.onmessage = (event) => {
       try {
