@@ -52,6 +52,13 @@ export declare const zh: {
     'action.copied': string;
     'action.copiedToken': string;
     'devices.title': string;
+    'devices.level.badge': string;
+    'devices.level.label': string;
+    'self.level': string;
+    'self.id': string;
+    'self.copy': string;
+    'self.copied': string;
+    'identity.only': string;
     'devices.empty': string;
     'devices.unknown': string;
     'devices.online': string;
@@ -202,6 +209,13 @@ export declare const en: {
     'action.copied': string;
     'action.copiedToken': string;
     'devices.title': string;
+    'devices.level.badge': string;
+    'devices.level.label': string;
+    'self.level': string;
+    'self.id': string;
+    'self.copy': string;
+    'self.copied': string;
+    'identity.only': string;
     'devices.empty': string;
     'devices.unknown': string;
     'devices.online': string;

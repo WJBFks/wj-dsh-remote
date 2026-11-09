@@ -31,14 +31,6 @@ import type { PairingService } from './pairing.ts';
 import type { InnerAuth } from './inner-auth.ts';
 export { LOCAL_ONLY_PREFIXES, PLUGIN_MANAGER_PATH, REMOTE_API_PATHS, REMOTE_DEVICE_HEADER, REMOTE_DEVICE_QUERY, REMOTE_PREFIX, REMOTE_UPGRADE_PATHS, WEB_UI_SETTINGS_BRIDGE_PATH, localOnlyDenial, } from './remote-methods.ts';
 export { REMOTE_API_PREFIX } from './remote-methods.ts';
-/**
- * Refuse a gated market action unless the device holds admin level.
- * @param inner - loopback path the channel would re-issue.
- * @param deviceId - authenticated paired device id.
- * @param service - pairing service owning the level table.
- * @returns a denial reason, or undefined when the request may pass.
- */
-export declare function marketAdminDenial(inner: string, deviceId: string, service: PairingService): string | undefined;
 /** Route-family dependencies. */
 export interface RemoteApiDeps {
     /** The pairing service (device gate + cookie name). */

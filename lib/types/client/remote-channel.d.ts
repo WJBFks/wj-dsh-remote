@@ -62,6 +62,11 @@ export declare function remoteChannelRequired(origin: PageOriginFacts, snapshot:
  * channel it can never pair on).
  */
 export declare const isLoopbackHostname: typeof isLoopbackName;
+/**
+ * Whether one same-origin path must ride the gated channel (fetch, EventSource,
+ * img/script/iframe src).
+ * @param pathname - the request URL pathname.
+ */
 export declare function shouldRewriteFetchPath(pathname: string): boolean;
 /**
  * Whether one WebSocket path must ride the gated channel.
