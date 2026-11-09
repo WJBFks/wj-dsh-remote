@@ -78,7 +78,7 @@ export function buildRemoteChannelBootScript(rules: RemoteChannelRules = REMOTE_
     'if(typeof h==="object"&&h!==null){var o={};for(var k in h)o[k]=h[k];o[R.deviceHeader]=dv;return Object.assign({},init,{headers:o})}' +
     'return init}' +
     'function sf(p){' +
-    'if(p.indexOf(R.pairPrefix)===0)return false;' +
+    'if(p.indexOf(R.pairPrefix)===0){var q=p.slice(R.pairPrefix.length);if(/^(me|level|status|events|revoke|rename|merge|stop|issue|heartbeat)(\\/|$)/.test(q))return true;return false}' +
     'if(p.indexOf(R.updatePrefix)===0)return false;' +
     'if(p===R.settingsBridgePrefix||p.indexOf(R.settingsBridgePrefix+"/")===0)return false;' +
     'if(p.indexOf(R.apiPrefix)===0)return true;' +
